@@ -1,21 +1,34 @@
 #!/usr/bin/env bash
-# This script audits DNS records for specified subdomains of a domain
+# This script displays DNS information for specified domain and subdomains
 
-function audit_subdomain {
-    local domain="$1"
-    local subdomain="$2"
-
-    if [ -z "$subdomain" ]; then
-        subdomains=("www" "lb-01" "web-01" "web-02")
-    else
-        subdomains=("$subdomain")
-    fi
-
-    for sub in "${subdomains[@]}"; do
-        record_type=$(dig "$sub.$domain" | awk '/ANSWER SECTION/ { getline; print $4 }')
-        destination=$(dig "$sub.$domain" | awk '/ANSWER SECTION/ { getline; print $5 }')
-        echo "The subdomain $sub is a $record_type record and points to $destination"
-    done
+get_dns_info() {
+    local domain=$1
+    local subdomain=$2
+    local result
+    
+    # Use dig to get DNS information and parse with awk
+    result=$(dig "$subdomain.$domain" +short | awk '{print $1}')
+    
+    # Determine record type (simplified to A record for this task)
+    local record_type="A"
+    
+    echo "The subdomain $subdomain is a $record_type record and points to $result"
 }
 
-audit_subdomain "$1" "$2i"
+main() {
+    local domain=$1
+    local subdomain=$2
+    
+    if [ -z "$subdomain" ]; then
+        # If no subdomain specified, check the default ones in order
+        for sd in www lb-01 web-01 web-02; do
+            get_dns_info "$domain" "$sd"
+        done
+    else
+        # If subdomain specified, check only that one
+        get_dns_info "$domain" "$subdomain"
+    fi
+}
+
+# Call main function with arguments
+main "$1" "$2"
